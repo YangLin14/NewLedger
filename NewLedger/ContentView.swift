@@ -8,17 +8,31 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var selectedTab = 0
+    @State private var showingAddExpense = false
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView(selection: $selectedTab) {
+            VaultView(showingAddExpense: $showingAddExpense)
+                .tabItem {
+                    Label("Vault", systemImage: "clipboard.fill")
+                }
+                .tag(0)
+            
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.crop.circle.fill")
+                }
+                .tag(1)
         }
-        .padding()
+        .sheet(isPresented: $showingAddExpense) {
+            AddExpenseView()
+        }
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }

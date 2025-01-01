@@ -9,93 +9,90 @@ struct BudgetSettingsView: View {
     @State private var monthlyLimit: String = ""
     @State private var yearlyLimit: String = ""
     
-    private var savingsMessage: (String, Color) {
+    private var budgetStatus: [(String, Color)] {
         let calendar = Calendar.current
         let now = Date()
+        var statuses: [(String, Color)] = []
         
-        let currentLimit: Double?
-        let totalExpenses: Double
-        
-        switch selectedPeriod {
-        case .daily:
-            currentLimit = store.profile.budgetSettings.dailyLimit
-            totalExpenses = store.expenses
+        // Daily status
+        if let dailyLimitValue = store.profile.budgetSettings.dailyLimit {
+            let dailyExpenses = store.expenses
                 .filter { calendar.isDate($0.date, inSameDayAs: now) }
                 .reduce(0) { $0 + $1.amount }
-        case .monthly:
-            currentLimit = store.profile.budgetSettings.monthlyLimit
-            totalExpenses = store.expenses
+            let dailyDifference = dailyLimitValue - dailyExpenses
+            statuses.append(getStatusMessage(difference: dailyDifference, period: "Daily"))
+        }
+        
+        // Monthly status
+        if let monthlyLimitValue = store.profile.budgetSettings.monthlyLimit {
+            let monthlyExpenses = store.expenses
                 .filter { calendar.isDate($0.date, equalTo: now, toGranularity: .month) }
                 .reduce(0) { $0 + $1.amount }
-        case .yearly:
-            currentLimit = store.profile.budgetSettings.yearlyLimit
-            totalExpenses = store.expenses
+            let monthlyDifference = monthlyLimitValue - monthlyExpenses
+            statuses.append(getStatusMessage(difference: monthlyDifference, period: "Monthly"))
+        }
+        
+        // Yearly status
+        if let yearlyLimitValue = store.profile.budgetSettings.yearlyLimit {
+            let yearlyExpenses = store.expenses
                 .filter { calendar.isDate($0.date, equalTo: now, toGranularity: .year) }
                 .reduce(0) { $0 + $1.amount }
+            let yearlyDifference = yearlyLimitValue - yearlyExpenses
+            statuses.append(getStatusMessage(difference: yearlyDifference, period: "Yearly"))
         }
         
-        guard let limit = currentLimit else {
-            return ("No budget limit set", .secondary)
-        }
-        
-        let difference = limit - totalExpenses
-        
+        return statuses
+    }
+    
+    private func getStatusMessage(difference: Double, period: String) -> (String, Color) {
         if difference > 0 {
-            return ("You've saved \(difference.formatted(.currency(code: "USD"))) so far!", .green)
+            return ("\(period): Saved \(difference.formatted(.currency(code: "USD")))", .green)
         } else if difference < 0 {
-            return ("You've exceeded your budget by \(abs(difference).formatted(.currency(code: "USD")))", .red)
+            return ("\(period): Over budget by \(abs(difference).formatted(.currency(code: "USD")))", .red)
         } else {
-            return ("You've exactly met your budget", .blue)
+            return ("\(period): Exactly on budget", .blue)
         }
     }
     
     var body: some View {
         NavigationView {
             Form {
-                Section {
-                    Picker("Budget Period", selection: $selectedPeriod) {
-                        ForEach(BudgetPeriod.allCases, id: \.self) { period in
-                            Text(period.rawValue).tag(period)
-                        }
+                Section("Budget Limits") {
+                    HStack {
+                        Text("Daily")
+                        Spacer()
+                        Text("$")
+                        TextField("Daily Limit", text: $dailyLimit)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
                     }
-                    .onChange(of: selectedPeriod) { _, _ in
-                        store.profile.budgetSettings.period = selectedPeriod
-                        store.synchronize()
+                    
+                    HStack {
+                        Text("Monthly")
+                        Spacer()
+                        Text("$")
+                        TextField("Monthly Limit", text: $monthlyLimit)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
                     }
-                }
-                
-                Section("Set Budget Limit") {
-                    switch selectedPeriod {
-                    case .daily:
-                        HStack {
-                            Text("$")
-                            TextField("Daily Limit", text: $dailyLimit)
-                                .keyboardType(.decimalPad)
-                        }
-                    case .monthly:
-                        HStack {
-                            Text("$")
-                            TextField("Monthly Limit", text: $monthlyLimit)
-                                .keyboardType(.decimalPad)
-                        }
-                    case .yearly:
-                        HStack {
-                            Text("$")
-                            TextField("Yearly Limit", text: $yearlyLimit)
-                                .keyboardType(.decimalPad)
-                        }
+                    
+                    HStack {
+                        Text("Yearly")
+                        Spacer()
+                        Text("$")
+                        TextField("Yearly Limit", text: $yearlyLimit)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
                     }
                 }
                 
-                Section {
-                    VStack(alignment: .center, spacing: 8) {
-                        Text(savingsMessage.0)
-                            .foregroundColor(savingsMessage.1)
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
+                if !budgetStatus.isEmpty {
+                    Section("Current Status") {
+                        ForEach(budgetStatus, id: \.0) { status in
+                            Text(status.0)
+                                .foregroundColor(status.1)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
                 }
             }
             .navigationTitle("Budget Settings")
