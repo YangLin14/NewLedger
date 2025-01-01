@@ -65,6 +65,22 @@ struct ProfileView: View {
                         }
                 }
                 
+                Section("Statistics") {
+                    HStack {
+                        Text("Total Expenses")
+                        Spacer()
+                        Text(store.totalExpenses().formatted(.currency(code: store.profile.currency.rawValue)))
+                            .bold()
+                    }
+                    
+                    HStack {
+                        Text("Number of Entries")
+                        Spacer()
+                        Text("\(store.expenses.count)")
+                            .bold()
+                    }
+                }
+                
                 Section("Expense Distribution") {
                     if !store.expenses.isEmpty {
                         ChartView(data: categoryTotals, colors: categoryColors)
@@ -89,7 +105,7 @@ struct ProfileView: View {
                                 
                                 // Amount and percentage
                                 VStack(alignment: .trailing) {
-                                    Text(total.formatted(.currency(code: "USD")))
+                                    Text(total.formatted(.currency(code: store.profile.currency.rawValue)))
                                         .bold()
                                         .foregroundColor(currentColor)
                                     Text(String(format: "%.1f%%", percentage))
@@ -138,23 +154,7 @@ struct ProfileView: View {
                         }
                     }
                 }
-                
-                Section("Statistics") {
-                    HStack {
-                        Text("Total Expenses")
-                        Spacer()
-                        Text(store.totalExpenses().formatted(.currency(code: store.profile.currency.rawValue)))
-                            .bold()
-                    }
-                    
-                    HStack {
-                        Text("Number of Entries")
-                        Spacer()
-                        Text("\(store.expenses.count)")
-                            .bold()
-                    }
-                }
-                
+                                
                 Section {
                     Button(role: .destructive) {
                         showingResetConfirmation = true

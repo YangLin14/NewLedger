@@ -46,9 +46,9 @@ struct BudgetSettingsView: View {
     
     private func getStatusMessage(difference: Double, period: String) -> (String, Color) {
         if difference > 0 {
-            return ("\(period): Saved \(difference.formatted(.currency(code: "USD")))", .green)
+            return ("\(period): Saved \(difference.formatted(.currency(code: store.profile.currency.rawValue)))", .green)
         } else if difference < 0 {
-            return ("\(period): Over budget by \(abs(difference).formatted(.currency(code: "USD")))", .red)
+            return ("\(period): Over budget by \(abs(difference).formatted(.currency(code: store.profile.currency.rawValue)))", .red)
         } else {
             return ("\(period): Exactly on budget", .blue)
         }
@@ -61,7 +61,7 @@ struct BudgetSettingsView: View {
                     HStack {
                         Text("Daily")
                         Spacer()
-                        Text("$")
+                        Text(store.profile.currency.symbol)
                         TextField("Daily Limit", text: $dailyLimit)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
@@ -70,7 +70,7 @@ struct BudgetSettingsView: View {
                     HStack {
                         Text("Monthly")
                         Spacer()
-                        Text("$")
+                        Text(store.profile.currency.symbol)
                         TextField("Monthly Limit", text: $monthlyLimit)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
@@ -79,7 +79,7 @@ struct BudgetSettingsView: View {
                     HStack {
                         Text("Yearly")
                         Spacer()
-                        Text("$")
+                        Text(store.profile.currency.symbol)
                         TextField("Yearly Limit", text: $yearlyLimit)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)

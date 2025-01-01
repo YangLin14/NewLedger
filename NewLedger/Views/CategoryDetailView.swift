@@ -57,7 +57,7 @@ struct CategoryDetailView: View {
                         HStack {
                             Text("Total")
                             Spacer()
-                            Text(store.totalForCategory(category).formatted(.currency(code: "USD")))
+                            Text(store.totalForCategory(category).formatted(.currency(code: store.profile.currency.rawValue)))
                                 .font(.title2)
                                 .bold()
                         }
@@ -153,6 +153,7 @@ struct CategoryDetailView: View {
 }
 
 struct ExpenseRowView: View {
+    @EnvironmentObject var store: ExpenseStore
     let expense: Expense
     @State private var showingEditSheet = false
     
@@ -169,7 +170,7 @@ struct ExpenseRowView: View {
                 
                 Spacer()
                 
-                Text(expense.amount.formatted(.currency(code: "USD")))
+                Text(expense.amount.formatted(.currency(code: store.profile.currency.rawValue)))
                     .font(.subheadline)
                     .bold()
             }

@@ -31,7 +31,7 @@ struct AddExpenseView: View {
                     TextField("Expense Name", text: $name)
                     
                     HStack {
-                        Text("$")
+                        Text(store.profile.currency.symbol)
                         TextField("Amount", value: $amount, format: .number)
                             .keyboardType(.decimalPad)
                     }

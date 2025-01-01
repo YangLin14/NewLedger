@@ -91,9 +91,9 @@ struct VaultView: View {
         let difference = budgetLimit - total
         
         if difference > 0 {
-            return ("\(periodName): \(total.formatted(.currency(code: "USD"))) of \(budgetLimit.formatted(.currency(code: "USD")))", .green)
+            return ("\(periodName): \(total.formatted(.currency(code: store.profile.currency.rawValue))) of \(budgetLimit.formatted(.currency(code: store.profile.currency.rawValue)))", .green)
         } else if difference < 0 {
-            return ("\(periodName): Over by \(abs(difference).formatted(.currency(code: "USD")))", .red)
+            return ("\(periodName): Over by \(abs(difference).formatted(.currency(code: store.profile.currency.rawValue)))", .red)
         } else {
             return ("\(periodName): Budget met", .blue)
         }
@@ -149,9 +149,9 @@ struct VaultView: View {
         let difference = limit - totalForPeriod
         
         if difference > 0 {
-            return ("You've saved \(difference.formatted(.currency(code: "USD"))) so far!", .green)
+            return ("You've saved \(difference.formatted(.currency(code: store.profile.currency.rawValue))) so far!", .green)
         } else if difference < 0 {
-            return ("You've exceeded your budget by \(abs(difference).formatted(.currency(code: "USD")))", .red)
+            return ("You've exceeded your budget by \(abs(difference).formatted(.currency(code: store.profile.currency.rawValue)))", .red)
         } else {
             return ("You've exactly met your budget", .blue)
         }
@@ -215,7 +215,7 @@ struct VaultView: View {
                         Text("Total Expenses")
                             .font(.headline)
                         Spacer()
-                        Text(totalForPeriod.formatted(.currency(code: "USD")))
+                        Text(totalForPeriod.formatted(.currency(code: store.profile.currency.rawValue)))
                             .font(.title2)
                             .bold()
                     }
@@ -306,6 +306,7 @@ struct VaultView: View {
 
 // MARK: - CategoryRowView
 struct CategoryRowView: View {
+    @EnvironmentObject var store: ExpenseStore
     let category: Category
     let total: Double
     let count: Int
@@ -325,7 +326,7 @@ struct CategoryRowView: View {
             
             Spacer()
             
-            Text(total.formatted(.currency(code: "USD")))
+            Text(total.formatted(.currency(code: store.profile.currency.rawValue)))
                 .font(.subheadline)
                 .bold()
         }
