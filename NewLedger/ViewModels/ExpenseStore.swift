@@ -137,3 +137,23 @@ class ExpenseStore: ObservableObject {
         }
     }
 }
+
+extension ExpenseStore {
+    func saveReceiptImage(_ imageData: Data, for expenseId: UUID) {
+        let receiptsFolder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("receipts")
+        
+        try? FileManager.default.createDirectory(at: receiptsFolder, withIntermediateDirectories: true)
+        
+        let imageUrl = receiptsFolder.appendingPathComponent("\(expenseId.uuidString).jpg")
+        try? imageData.write(to: imageUrl)
+    }
+    
+    func getReceiptImage(for expenseId: UUID) -> Data? {
+        guard let imageUrl = Expense(id: expenseId, name: "", amount: 0, date: Date(), category: Category(name: "", emoji: "")).receiptImageURL,
+              let imageData = try? Data(contentsOf: imageUrl) else {
+            return nil
+        }
+        return imageData
+    }
+}

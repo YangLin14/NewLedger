@@ -70,7 +70,9 @@ struct CategoryDetailView: View {
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(categoryExpenses) { expense in
-                            ExpenseRowView(expense: expense)
+                            NavigationLink(destination: ExpenseDetailView(expense: expense)) {
+                                ExpenseRowView(expense: expense)
+                            }
                         }
                     }
                 }
@@ -155,28 +157,22 @@ struct CategoryDetailView: View {
 struct ExpenseRowView: View {
     @EnvironmentObject var store: ExpenseStore
     let expense: Expense
-    @State private var showingEditSheet = false
     
     var body: some View {
-        Button(action: { showingEditSheet = true }) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(expense.name)
-                        .font(.headline)
-                    Text(expense.date.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Text(expense.amount.formatted(.currency(code: store.profile.currency.rawValue)))
-                    .font(.subheadline)
-                    .bold()
+        HStack {
+            VStack(alignment: .leading) {
+                Text(expense.name)
+                    .font(.headline)
+                Text(expense.date.formatted(date: .abbreviated, time: .omitted))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-        }
-        .sheet(isPresented: $showingEditSheet) {
-            AddExpenseView(expense: expense, isEditing: true)
+            
+            Spacer()
+            
+            Text(expense.amount.formatted(.currency(code: store.profile.currency.rawValue)))
+                .font(.subheadline)
+                .bold()
         }
     }
 }

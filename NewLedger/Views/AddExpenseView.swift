@@ -11,6 +11,7 @@ struct AddExpenseView: View {
     @State private var showingAddCategory = false
     @State private var newCategoryName = ""
     @State private var newCategoryEmoji = ""
+    @State private var receiptImage: UIImage?
     
     var expense: Expense?
     var isEditing = false
@@ -27,6 +28,15 @@ struct AddExpenseView: View {
     var body: some View {
         NavigationView {
             Form {
+                Section {
+                    ReceiptScannerView(
+                        name: $name,
+                        amount: $amount,
+                        date: $date,
+                        receiptImage: $receiptImage
+                    )
+                }
+                
                 Section {
                     TextField("Expense Name", text: $name)
                     
@@ -89,6 +99,12 @@ struct AddExpenseView: View {
                             store.updateExpense(newExpense)
                         } else {
                             store.addExpense(newExpense)
+                        }
+                        
+                        // Save receipt image if available
+                        if let image = receiptImage,
+                           let imageData = image.jpegData(compressionQuality: 0.8) {
+                            store.saveReceiptImage(imageData, for: newExpense.id)
                         }
                         
                         dismiss()
