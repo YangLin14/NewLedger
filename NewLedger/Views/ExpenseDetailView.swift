@@ -8,19 +8,11 @@ struct ExpenseDetailView: View {
     let expense: Expense
     @State private var showingEditSheet = false
     @State private var imageData: Data?
+    @State private var isZoomViewPresented = false
     
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Receipt Image Section
-                if let imageData = imageData, let uiImage = UIImage(data: imageData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 300)
-                        .cornerRadius(12)
-                }
-                
                 // Expense Details
                 VStack(spacing: 16) {
                     HStack {
@@ -62,6 +54,21 @@ struct ExpenseDetailView: View {
                     .shadow(radius: 2)
                 }
                 .padding()
+                
+                Spacer(minLength: 15)
+                
+                // Receipt Image Section
+                if let imageData = imageData, let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxHeight: 700)
+                        .cornerRadius(12)
+                        .padding()
+                        .onTapGesture {
+                            isZoomViewPresented = true
+                        }
+                }
             }
         }
         .navigationTitle("Expense Details")
@@ -71,6 +78,11 @@ struct ExpenseDetailView: View {
                 Button("Edit") {
                     showingEditSheet = true
                 }
+            }
+        }
+        .sheet(isPresented: $isZoomViewPresented) {
+            if let imageData = imageData, let uiImage = UIImage(data: imageData) {
+                ZoomableImageView(image: uiImage)
             }
         }
         .sheet(isPresented: $showingEditSheet) {
@@ -84,6 +96,72 @@ struct ExpenseDetailView: View {
         }
     }
 }
+
+struct ZoomableImageView: View {
+    let image: UIImage
+    
+    @Environment(\.dismiss) var dismiss
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            GeometryReader { geometry in
+                VStack {
+                    Spacer()
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .scaleEffect(scale)
+                        .offset(offset)
+                        .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
+                        .gesture(
+                            SimultaneousGesture(
+                                MagnificationGesture()
+                                    .onChanged { value in
+                                        scale = max(1.0, lastScale * value) // Ensure scale does not go below 1.0
+                                    }
+                                    .onEnded { _ in
+                                        lastScale = scale
+                                    },
+                                DragGesture()
+                                    .onChanged { value in
+                                        let newOffset = CGSize(
+                                            width: lastOffset.width + value.translation.width,
+                                            height: lastOffset.height + value.translation.height
+                                        )
+                                        
+                                        // Constrain dragging to screen bounds
+                                        let halfWidth = (geometry.size.width * scale) / 2
+                                        let halfHeight = (geometry.size.height * scale) / 2
+                                        
+                                        let maxX = max(halfWidth - geometry.size.width / 2, 0)
+                                        let maxY = max(halfHeight - geometry.size.height / 2, 0)
+                                        
+                                        offset = CGSize(
+                                            width: min(max(newOffset.width, -maxX), maxX),
+                                            height: min(max(newOffset.height, -maxY), maxY)
+                                        )
+                                    }
+                                    .onEnded { _ in
+                                        lastOffset = offset
+                                    }
+                            )
+                        )
+                        .onTapGesture {
+                            dismiss() // Dismiss on tap
+                        }
+                    Spacer()
+                }
+            }
+        }
+    }
+}
+
 
 struct ReceiptScannerView: View {
     @Environment(\.dismiss) var dismiss
@@ -137,6 +215,7 @@ struct ReceiptScannerView: View {
         .onChange(of: scannerViewModel.extractedAmount) { _, newValue in
             if let totalAmount = newValue {
                 amount = totalAmount
+                print("Updated amount: \(amount)")
             }
         }
         .onChange(of: scannerViewModel.extractedDate) { _, newValue in
@@ -173,26 +252,69 @@ class ScannerViewModel: ObservableObject {
     
     private func extractInformation(from text: String) {
         let lines = text.components(separatedBy: .newlines)
-        
-        // Extract merchant name (first non-empty line)
-        extractedMerchantName = lines.first { !$0.isEmpty }
-        
-        // Extract total amount
-        if let totalLine = lines.first(where: { $0.lowercased().contains("total") }) {
-            let numbers = totalLine.components(separatedBy: CharacterSet.decimalDigits.inverted)
-                .joined()
-            if let total = Double(numbers) {
-                extractedAmount = total / 100 // Convert cents to dollars
+        // print("Scanned text: \(lines)")
+
+        // Extract store name and address
+        if let addressIndex = lines.firstIndex(where: { $0.contains(",") && $0.range(of: "\\d{5}", options: .regularExpression) != nil }) {
+            // Use the line above the address as the store name, if it exists
+            if addressIndex > 0 {
+                extractedMerchantName = lines[addressIndex - 2].trimmingCharacters(in: .whitespacesAndNewlines)
+                print("Extracted store name: \(extractedMerchantName ?? "None")")
             }
         }
-        
-        // Extract date (simplified - enhance based on your needs)
-        if let dateLine = lines.first(where: { $0.contains("/") }) {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MM/dd/yyyy"
-            if let date = formatter.date(from: dateLine) {
-                extractedDate = date
+
+        // Extract the largest amount after the "$" symbol
+        var largestAmount: Double = 0.0
+        for line in lines {
+            if line.contains("$") {
+                let regex = try? NSRegularExpression(pattern: "\\$(\\d+(\\.\\d{1,2})?)")
+                let matches = regex?.matches(in: line, options: [], range: NSRange(location: 0, length: line.utf16.count)) ?? []
+
+                for match in matches {
+                    if let matchRange = Range(match.range(at: 1), in: line) {
+                        let numberString = String(line[matchRange])
+
+                        if let amount = Double(numberString) {
+                            largestAmount = max(largestAmount, amount)
+                        }
+                    }
+                }
             }
+        }
+        if largestAmount > 0.0 {
+            extractedAmount = largestAmount
+            print("Extracted largest amount: \(largestAmount)")
+        }
+
+        // Extract the receipt date
+        let dateFormats = ["MM/dd/yyyy", "MM-dd-yyyy", "yyyy-MM-dd", "MM/dd/yy", "MMMM d, yyyy"]
+        let regex = try? NSRegularExpression(pattern: "\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b|\\b[A-Za-z]+\\s\\d{1,2},\\s\\d{4}\\b")
+
+        for line in lines {
+            if let match = regex?.firstMatch(in: line, options: [], range: NSRange(location: 0, length: line.utf16.count)) {
+                if let matchRange = Range(match.range, in: line) {
+                    var detectedDateString = String(line[matchRange])
+
+                    // Normalize 2-digit year formats to 4-digit year (e.g., 12/17/24 -> 12/17/2024)
+                    if detectedDateString.range(of: "\\d{1,2}/\\d{1,2}/\\d{2}", options: .regularExpression) != nil {
+                        let components = detectedDateString.split(separator: "/")
+                        if components.count == 3, let year = Int(components[2]), year < 100 {
+                            detectedDateString = "\(components[0])/\(components[1])/20\(components[2])"
+                        }
+                    }
+
+                    for dateFormat in dateFormats {
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = dateFormat
+                        if let detectedDate = formatter.date(from: detectedDateString) {
+                            extractedDate = detectedDate
+                            print("Extracted date: \(detectedDate)")
+                            break
+                        }
+                    }
+                }
+            }
+            if extractedDate != nil { break }
         }
     }
 }
