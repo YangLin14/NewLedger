@@ -3,6 +3,7 @@ import Foundation
 struct Profile: Codable {
     var name: String
     var imageData: Data?
+    var backgroundImageData: Data?
     var budgetSettings: BudgetSettings
     
     init(name: String = "User", imageData: Data? = nil) {
